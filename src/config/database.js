@@ -10,10 +10,16 @@ const connectDatabase = async () => {
     console.log(`📦 Database : ${connection.connection.name}`);
     console.log(`🌐 Host     : ${connection.connection.host}`);
     console.log("======================================");
-  } catch (error) {
+  } 
+
+
+     catch (error) {
     console.error("======================================");
     console.error("❌ MongoDB Connection Failed");
-    console.error(error.stack);
+    console.error("ERROR NAME:", error.name);
+    console.error("ERROR MESSAGE:", error.message);
+    console.error("FULL ERROR:", error);
+    console.error("STACK:", error.stack);
     console.error("======================================");
 
     process.exit(1);
