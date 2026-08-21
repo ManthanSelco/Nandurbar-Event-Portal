@@ -13,7 +13,7 @@ const connectDatabase = async () => {
   } catch (error) {
     console.error("======================================");
     console.error("❌ MongoDB Connection Failed");
-    console.error(error.message);
+    console.error(error.stack);
     console.error("======================================");
 
     process.exit(1);
