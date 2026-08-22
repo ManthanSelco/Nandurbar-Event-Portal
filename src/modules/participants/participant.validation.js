@@ -43,16 +43,24 @@ export const createParticipantSchema = z.object({
   ]),
 
   organizationName: z.string().trim().min(1).max(200),
-
-  sector: z.enum([
-    "FOOD_PROCESSING",
-    "AGRICULTURE",
-    "LIVESTOCK",
-    "RETAIL_SERVICES",
-    "MANUFACTURING",
-    "OTHER",
-  ]),
-
+sector: z.enum([
+  "FOOD_PROCESSING",
+  "AGRICULTURE",
+  "LIVESTOCK",
+  "RETAIL_SERVICES",
+  "MANUFACTURING",
+  "Papad",
+  "Mushroom",
+  "Millets",
+  "Chilli",
+  "Oil Mill",
+  "Rice Mill",
+  "Dairy",
+  "Honey",
+  "Dal",
+  "Vegitable",
+  "OTHER",
+]),
   whatsappAvailable: z.boolean(),
 
 
@@ -244,14 +252,24 @@ export const createVolunteerParticipantSchema = z.object({
 
   organizationName: z.string().trim().min(1).max(200),
 
-  sector: z.enum([
-    "FOOD_PROCESSING",
-    "AGRICULTURE",
-    "LIVESTOCK",
-    "RETAIL_SERVICES",
-    "MANUFACTURING",
-    "OTHER",
-  ]),
+sector: z.enum([
+  "FOOD_PROCESSING",
+  "AGRICULTURE",
+  "LIVESTOCK",
+  "RETAIL_SERVICES",
+  "MANUFACTURING",
+  "Papad",
+  "Mushroom",
+  "Millets",
+  "Chilli",
+  "Oil Mill",
+  "Rice Mill",
+  "Dairy",
+  "Honey",
+  "Dal",
+  "Vegitable",
+  "OTHER",
+]),
 
   whatsappAvailable: z.boolean(),
 
