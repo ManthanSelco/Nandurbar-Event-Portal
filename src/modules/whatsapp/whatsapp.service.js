@@ -272,11 +272,33 @@ const selectRequirement = async ({
   const { vendors, governmentSchemes } =
     await findMatches(requirement);
 
-  participant.selectedRequirement = requirement._id;
-  participant.participantStatus = "REQUIREMENT_SELECTED";
-  participant.whatsappStatus = "ACTIVE";
-  participant.lastWhatsAppInteractionAt = new Date();
-  await participant.save();
+  const participantStatus = classifyParticipantResponse(text);
+const followUpRequired = participantStatus !== "PROBLEM_SOLVED";
+
+await Participant.updateOne(
+  { _id: participant._id },
+  {
+    $set: {
+      whatsappStatus: "ACTIVE",
+      lastWhatsAppInteractionAt: new Date(),
+      participantStatus,
+      followUpRequired,
+      ...(participant.postEventStep === undefined ||
+      participant.postEventStep === null ||
+      participant.postEventStep === "NONE"
+        ? { postEventStep: "LIVELIHOOD" }
+        : {}),
+    },
+  }
+);
+
+participant.whatsappStatus = "ACTIVE";
+participant.lastWhatsAppInteractionAt = new Date();
+if (!participant.postEventStep || participant.postEventStep === "NONE") {
+  participant.postEventStep = "LIVELIHOOD";
+}
+participant.participantStatus = participantStatus;
+participant.followUpRequired = followUpRequired;
 
   const interaction = await WhatsAppInteraction.create({
     participant: participant._id,
