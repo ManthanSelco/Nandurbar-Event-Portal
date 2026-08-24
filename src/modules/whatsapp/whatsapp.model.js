@@ -42,16 +42,17 @@ const whatsappInteractionSchema = new mongoose.Schema(
     },
 
     queryType: {
-      type: String,
-      enum: [
-        "SUPPORT_REQUEST",
-        "REQUIREMENT_SELECTION",
-        "INFORMATION_REQUEST",
-        "FOLLOW_UP",
-        "OTHER",
-      ],
-      default: "OTHER",
-    },
+  type: String,
+  enum: [
+    "SUPPORT_REQUEST",
+    "REQUIREMENT_SELECTION",
+    "INFORMATION_REQUEST",
+    "FOLLOW_UP",
+    "POST_EVENT",
+    "OTHER",
+  ],
+  default: "OTHER",
+},
 
     message: {
       type: String,

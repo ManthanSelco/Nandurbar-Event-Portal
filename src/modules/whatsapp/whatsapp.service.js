@@ -190,7 +190,7 @@ const sendPostEventTemplate = async ({ participantId }) => {
     interaction.sentAt = new Date();
     interaction.metadata = { ...interaction.metadata, providerResponse: result.raw };
     await interaction.save();
-    await Participant.updateOne({ _id: participant._id }, { $set: { whatsappStatus: "CONTACTED", lastWhatsAppInteractionAt: new Date(), followUpRequired: true, postEventStep: "LIVELIHOOD" } });
+    await Participant.updateOne({ _id: participant._id }, { $set: { whatsappStatus: "CONTACTED", lastWhatsAppInteractionAt: new Date(), followUpRequired: true, postEventStep: "NONE" } });
     return { interaction, provider: result.raw };
   } catch (error) {
     interaction.status = "FAILED";
@@ -432,8 +432,47 @@ const sendSupportSolutionDetails = async ({ participant, solutionKey }) => {
 };
 
 const processPostEventReply = async ({ participant, text }) => {
-  let step = participant.postEventStep || "NONE";
-  if (step === "NONE") { participant.postEventStep = "LIVELIHOOD"; participant.followUpRequired = true; await participant.save(); step = "LIVELIHOOD"; }
+
+let step = participant.postEventStep || "NONE";
+const normalizedText = normalize(text);
+
+if (step === "NONE") {
+  if (["होय", "yes", "हो"].includes(normalizedText)) {
+    participant.postEventStep = "LIVELIHOOD";
+    participant.assessmentStatus = "IN_PROGRESS";
+    participant.followUpRequired = true;
+
+    await participant.save();
+
+    await sendLocalizedText({
+      participant,
+      body: "तुमच्या उपजीविकेचा मुख्य प्रकार कोणता आहे?\n\n1. शेती\n2. पशुपालन\n3. सूक्ष्म व्यवसाय / छोटा व्यवसाय\n4. इतर",
+      messageType: "REQUIREMENT_QUESTION",
+      queryType: "POST_EVENT",
+    });
+
+    return true;
+  }
+
+  if (["नाही", "no", "नको"].includes(normalizedText)) {
+    participant.postEventStep = "COMPLETED";
+    participant.followUpRequired = false;
+
+    await participant.save();
+
+    await sendLocalizedText({
+      participant,
+      body: "ठीक आहे. तुमचा वेळ दिल्याबद्दल धन्यवाद!",
+      queryType: "POST_EVENT",
+    });
+
+    return true;
+  }
+
+  return true;
+}
+
+
   if (step === "COMPLETED") return false;
 
   if (step === "LIVELIHOOD") {
