@@ -431,108 +431,309 @@ const sendSupportSolutionDetails = async ({ participant, solutionKey }) => {
   return {matchedVendors,matchedSchemes};
 };
 
+
 const processPostEventReply = async ({ participant, text }) => {
+  const step = participant.postEventStep || "NONE";
+  const normalizedText = normalize(text);
 
-let step = participant.postEventStep || "NONE";
-const normalizedText = normalize(text);
+  if (step === "NONE") {
+    if (["होय", "yes", "हो"].includes(normalizedText)) {
+      participant.postEventStep = "LIVELIHOOD";
+      participant.assessmentStatus = "IN_PROGRESS";
+      participant.followUpRequired = true;
 
-if (step === "NONE") {
-  if (["होय", "yes", "हो"].includes(normalizedText)) {
-    participant.postEventStep = "LIVELIHOOD";
-    participant.assessmentStatus = "IN_PROGRESS";
+      await participant.save();
+
+      await sendLocalizedText({
+        participant,
+        body: `तुमच्या उपजीविकेचा मुख्य प्रकार कोणता आहे?
+
+1. शेती
+2. पशुपालन
+3. सूक्ष्म व्यवसाय / छोटा व्यवसाय
+4. इतर`,
+        messageType: "REQUIREMENT_QUESTION",
+        queryType: "POST_EVENT",
+      });
+
+      return true;
+    }
+
+    if (["नाही", "no", "नको"].includes(normalizedText)) {
+      participant.postEventStep = "COMPLETED";
+      participant.followUpRequired = false;
+
+      await participant.save();
+
+      await sendLocalizedText({
+        participant,
+        body: "ठीक आहे. तुमचा वेळ दिल्याबद्दल धन्यवाद!",
+        queryType: "POST_EVENT",
+      });
+
+      return true;
+    }
+
+    return true;
+  }
+
+  if (step === "COMPLETED") return false;
+
+  // Q2: Support / Solution
+  if (step === "LIVELIHOOD") {
+    const value = await matchChoice(
+      participant,
+      text,
+      POST_EVENT_OPTIONS.livelihood
+    );
+
+    if (!value) {
+      await sendLocalizedText({
+        participant,
+        body: `कृपया खालीलपैकी योग्य पर्यायाचा क्रमांक किंवा नाव पाठवा:
+
+1. शेती
+2. पशुपालन
+3. सूक्ष्म व्यवसाय / छोटा व्यवसाय
+4. इतर`,
+        queryType: "POST_EVENT",
+      });
+      return true;
+    }
+
+    participant.livelihoodCategories = Array.from(
+      new Set([
+        ...(participant.livelihoodCategories || []),
+        value,
+      ])
+    );
+
+    participant.postEventStep = "SUPPORT";
+    await participant.save();
+
+    await sendLocalizedText({
+      participant,
+      body: `तुम्हाला कोणत्या प्रकारची मदत किंवा उपाययोजना हवी आहे?
+
+1. तंत्रज्ञान / यंत्रसामग्री
+2. सौर ऊर्जा / ऊर्जा उपाय
+3. उत्पादन विकास
+4. ब्रँडिंग आणि मार्केटिंग
+5. पॅकेजिंग
+6. वित्तपुरवठा
+7. प्रशिक्षण
+8. बाजारपेठेशी जोडणी
+9. इतर`,
+      queryType: "POST_EVENT",
+    });
+
+    return true;
+  }
+
+  // Q3: Specific support
+  if (step === "SUPPORT") {
+    const value = await matchChoice(
+      participant,
+      text,
+      POST_EVENT_OPTIONS.support
+    );
+
+    if (!value) {
+      await sendLocalizedText({
+        participant,
+        body: `कृपया खालीलपैकी एका मदतीचा क्रमांक किंवा नाव पाठवा:
+
+1. तंत्रज्ञान / यंत्रसामग्री
+2. सौर ऊर्जा / ऊर्जा उपाय
+3. उत्पादन विकास
+4. ब्रँडिंग आणि मार्केटिंग
+5. पॅकेजिंग
+6. वित्तपुरवठा
+7. प्रशिक्षण
+8. बाजारपेठेशी जोडणी
+9. इतर`,
+        queryType: "POST_EVENT",
+      });
+      return true;
+    }
+
+    participant.supportSolutions = Array.from(
+      new Set([
+        ...(participant.supportSolutions || []),
+        value,
+      ])
+    );
+
+    participant.postEventStep = "SPECIFIC_SOLUTION";
     participant.followUpRequired = true;
 
     await participant.save();
 
-    await sendLocalizedText({
+    await sendSupportSolutionDetails({
       participant,
-      body: "तुमच्या उपजीविकेचा मुख्य प्रकार कोणता आहे?\n\n1. शेती\n2. पशुपालन\n3. सूक्ष्म व्यवसाय / छोटा व्यवसाय\n4. इतर",
-      messageType: "REQUIREMENT_QUESTION",
-      queryType: "POST_EVENT",
+      solutionKey: value,
     });
 
     return true;
   }
 
-  if (["नाही", "no", "नको"].includes(normalizedText)) {
-    participant.postEventStep = "COMPLETED";
-    participant.followUpRequired = false;
-
-    await participant.save();
-
-    await sendLocalizedText({
-      participant,
-      body: "ठीक आहे. तुमचा वेळ दिल्याबद्दल धन्यवाद!",
-      queryType: "POST_EVENT",
-    });
-
-    return true;
-  }
-
-  return true;
-}
-
-
-  if (step === "COMPLETED") return false;
-
-  if (step === "LIVELIHOOD") {
-    const value = await matchChoice(participant, text, POST_EVENT_OPTIONS.livelihood);
-    if (!value) { await sendLocalizedText({ participant, body: await localized(participant, "Please reply with the number or name: 1. Agriculture 2. Animal Husbandry 3. Micro-business / small business 4. Other.") }); return true; }
-    participant.livelihoodCategories = Array.from(new Set([...(participant.livelihoodCategories || []), value]));
-    participant.postEventStep = "SUPPORT";
-    await participant.save();
-    await sendLocalizedText({ participant, body: await localized(participant, "What kind of support or solution are you looking for? Reply with the number or name: 1. Technology / machinery 2. Solar / energy 3. Product development 4. Branding & marketing 5. Packaging 6. Financing 7. Training 8. Market linkage 9. Other.") });
-    return true;
-  }
-
-  if (step === "SUPPORT") {
-    const value = await matchChoice(participant, text, POST_EVENT_OPTIONS.support);
-    if (!value) { await sendLocalizedText({ participant, body: await localized(participant, "Please reply with the number or name of one support option: Technology / machinery, Solar / energy, Product development, Branding & marketing, Packaging, Financing, Training, Market linkage, or Other.") }); return true; }
-    participant.supportSolutions = Array.from(new Set([...(participant.supportSolutions || []), value]));
-    participant.postEventStep = "SPECIFIC_SOLUTION"; participant.followUpRequired = true; await participant.save();
-    await sendSupportSolutionDetails({ participant, solutionKey: value });
-    return true;
-  }
-
+  // Q4: Specific solution / provider
   if (step === "SPECIFIC_SOLUTION") {
-    participant.specificSolutionProviderInterested = normalize(text) !== "no" && normalize(text) !== "नाही" && normalize(text) !== "नहीं";
-    participant.specificSolutionProviderInterest = participant.specificSolutionProviderInterested ? text.trim() : "";
+    participant.specificSolutionProviderInterested =
+      normalizedText !== "no" &&
+      normalizedText !== "नाही" &&
+      normalizedText !== "नहीं";
+
+    participant.specificSolutionProviderInterest =
+      participant.specificSolutionProviderInterested
+        ? text.trim()
+        : "";
+
     participant.postEventStep = "NEXT_ACTION";
+
     await participant.save();
-    await sendLocalizedText({ participant, body: await localized(participant, "What would you like to do next? Reply with the number or name: 1. Understand the solution better 2. Speak to the solution provider 3. Get a cost estimate 4. Explore financing options 5. Discuss implementation 6. Other.") });
+
+    await sendLocalizedText({
+      participant,
+      body: `पुढे तुम्हाला काय करायचे आहे?
+
+1. उपाययोजना अधिक चांगल्या प्रकारे समजून घेणे
+2. उपाय प्रदात्याशी बोलणे
+3. खर्चाचा अंदाज घेणे
+4. वित्तपुरवठ्याचे पर्याय जाणून घेणे
+5. अंमलबजावणीबाबत चर्चा करणे
+6. इतर`,
+      queryType: "POST_EVENT",
+    });
+
     return true;
   }
 
+  // Q5: Next action
   if (step === "NEXT_ACTION") {
-    const value = await matchChoice(participant, text, POST_EVENT_OPTIONS.nextAction);
-    if (!value) { await sendLocalizedText({ participant, body: await localized(participant, "Please reply with one next action: Understand solution, Speak to provider, Cost estimate, Financing, Implementation, or Other.") }); return true; }
-    participant.nextActions = Array.from(new Set([...(participant.nextActions || []), value]));
+    const value = await matchChoice(
+      participant,
+      text,
+      POST_EVENT_OPTIONS.nextAction
+    );
+
+    if (!value) {
+      await sendLocalizedText({
+        participant,
+        body: `कृपया खालीलपैकी एक पर्याय पाठवा:
+
+1. उपाययोजना अधिक चांगल्या प्रकारे समजून घेणे
+2. उपाय प्रदात्याशी बोलणे
+3. खर्चाचा अंदाज घेणे
+4. वित्तपुरवठ्याचे पर्याय जाणून घेणे
+5. अंमलबजावणीबाबत चर्चा करणे
+6. इतर`,
+        queryType: "POST_EVENT",
+      });
+      return true;
+    }
+
+    participant.nextActions = Array.from(
+      new Set([
+        ...(participant.nextActions || []),
+        value,
+      ])
+    );
+
     participant.postEventStep = "USEFUL";
+
     await participant.save();
-    await sendLocalizedText({ participant, body: await localized(participant, "What did you find most useful at the Mela? Reply with technologies / machinery, solar / energy, solution providers, speakers / sessions, demonstrations, financing / support, networking, or Other.") });
+
+    await sendLocalizedText({
+      participant,
+      body: `मेळ्यात तुम्हाला सर्वात उपयुक्त काय वाटले?
+
+1. तंत्रज्ञान / यंत्रसामग्री
+2. सौर ऊर्जा / ऊर्जा उपाय
+3. उपाय प्रदात्यांशी संवाद
+4. वक्ते / सत्रे
+5. प्रात्यक्षिके
+6. वित्तपुरवठा / सहाय्याची माहिती
+7. इतर सहभागींसोबत नेटवर्किंग
+8. इतर`,
+      queryType: "POST_EVENT",
+    });
+
     return true;
   }
 
+  // Q6: What was useful
   if (step === "USEFUL") {
-    const values = text.split(/[,|]/).map((item) => item.trim()).filter(Boolean);
+    const values = text
+      .split(/[,|]/)
+      .map((item) => item.trim())
+      .filter(Boolean);
+
     const matched = [];
-    for (const value of values) { const key = await matchChoice(participant, value, POST_EVENT_OPTIONS.useful); if (key) matched.push(key); }
-    if (!matched.length) { await sendLocalizedText({ participant, body: await localized(participant, "Please mention what was useful, such as technologies / machinery, solar / energy, solution providers, demonstrations, financing / support, or networking.") }); return true; }
-    participant.usefulAtMela = Array.from(new Set([...(participant.usefulAtMela || []), ...matched]));
+
+    for (const value of values) {
+      const key = await matchChoice(
+        participant,
+        value,
+        POST_EVENT_OPTIONS.useful
+      );
+
+      if (key) matched.push(key);
+    }
+
+    if (!matched.length) {
+      await sendLocalizedText({
+        participant,
+        body: `कृपया मेळ्यात तुम्हाला काय उपयुक्त वाटले ते सांगा.
+
+उदा. तंत्रज्ञान / यंत्रसामग्री, सौर ऊर्जा, उपाय प्रदाते, प्रात्यक्षिके, वित्तपुरवठा / सहाय्य किंवा नेटवर्किंग.`,
+        queryType: "POST_EVENT",
+      });
+
+      return true;
+    }
+
+    participant.usefulAtMela = Array.from(
+      new Set([
+        ...(participant.usefulAtMela || []),
+        ...matched,
+      ])
+    );
+
     participant.postEventStep = "FEEDBACK";
+
     await participant.save();
-    await sendLocalizedText({ participant, body: await localized(participant, "What could have been better at the Mela? Please send your feedback.") });
+
+    await sendLocalizedText({
+      participant,
+      body: `मेळ्यात आणखी काय चांगले करता आले असते?
+
+कृपया तुमचा अभिप्राय पाठवा.`,
+      queryType: "POST_EVENT",
+    });
+
     return true;
   }
 
+  // Final feedback
   if (step === "FEEDBACK") {
     participant.whatCouldBeBetter = text.trim();
     participant.postEventStep = "COMPLETED";
     participant.followUpRequired = true;
+
     await participant.save();
-    await sendLocalizedText({ participant, body: await localized(participant, "Thank you for sharing your requirements and feedback. Our team will follow up with relevant solutions and providers.") , queryType: "POST_EVENT" });
+
+    await sendLocalizedText({
+      participant,
+      body: `तुमच्या गरजा आणि अभिप्राय शेअर केल्याबद्दल धन्यवाद!
+
+आमची टीम तुमच्यासाठी संबंधित उपाय आणि उपाय प्रदात्यांची माहिती शेअर करेल.`,
+      queryType: "POST_EVENT",
+    });
+
     return true;
   }
+
   return false;
 };
 
