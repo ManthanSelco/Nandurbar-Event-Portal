@@ -26,25 +26,32 @@ const router = Router();
 router.get(
   "/",
   protect,
-  authorize("SUPER_ADMIN"),
+  authorize("SUPER_ADMIN", "STAFF"),
   participantController.getParticipants
 );
 
-router.get("/stats", protect, authorize("SUPER_ADMIN"), participantController.getStats);
+router.get("/stats", protect, authorize("SUPER_ADMIN", "STAFF"), participantController.getStats);
 
 router.get(
   "/:id",
   protect,
-  authorize("SUPER_ADMIN"),
+  authorize("SUPER_ADMIN", "STAFF"),
   participantController.getParticipantById
 );
 
 router.patch(
   "/:id",
   protect,
-  authorize("SUPER_ADMIN"),
+  authorize("SUPER_ADMIN", "STAFF"),
   validate(updateParticipantSchema),
   participantController.updateParticipant
+);
+
+router.delete(
+  "/:id",
+  protect,
+  authorize("SUPER_ADMIN"),
+  participantController.deleteParticipant
 );
 
 /*
@@ -70,6 +77,8 @@ router.post(
   validate(createParticipantSchema),
   participantController.createParticipant
 );
+
+
 
 /*
 |--------------------------------------------------------------------------

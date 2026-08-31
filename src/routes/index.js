@@ -9,6 +9,9 @@ import governmentSchemeRoutes from "../modules/governmentSchemes/governmentSchem
 import supportRequirementRoutes from "../modules/supportRequirements/supportRequirement.routes.js";
 import whatsappRoutes from "../modules/whatsapp/whatsapp.routes.js";
 
+import participantJourneyRoutes from "../modules/participants/participantJourney.routes.js";
+
+
 const router = Router();
 
 // Authentication
@@ -27,9 +30,12 @@ router.use(
 );
 
 
+
 router.use("/vendors", vendorRoutes);
 router.use("/government-schemes", governmentSchemeRoutes);
 router.use("/support-requirements", supportRequirementRoutes);
 router.use("/whatsapp", whatsappRoutes);
+
+router.use("/participant-journey", participantJourneyRoutes);
 
 export default router;

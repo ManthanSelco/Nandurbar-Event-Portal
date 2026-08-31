@@ -27,7 +27,7 @@ router.post(
 router.get(
   "/",
   protect,
-  authorize("SUPER_ADMIN"),
+  authorize("SUPER_ADMIN", "STAFF"),
   questionController.getAllQuestions
 );
 
@@ -37,6 +37,8 @@ router.get(
   authorize("SUPER_ADMIN"),
   questionController.getQuestionById
 );
+
+
 
 router.patch(
   "/:id",

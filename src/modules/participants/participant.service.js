@@ -299,6 +299,33 @@ const updateParticipant = async (id, payload) => {
 
 };
 
+
+const deleteParticipant = async (id, deletedBy) => {
+  if (!mongoose.Types.ObjectId.isValid(id)) {
+    throw new ApiError(400, "Invalid participant ID.");
+  }
+
+  const participant = await Participant.findOne({
+    _id: id,
+    isDeleted: false,
+  });
+
+  if (!participant) {
+    throw new ApiError(404, "Participant not found.");
+  }
+
+  participant.isDeleted = true;
+  participant.deletedBy = deletedBy;
+  participant.deletedAt = new Date();
+
+  await participant.save();
+
+  return {
+    id: participant._id,
+    deleted: true,
+  };
+};
+
 export default {
   createParticipant,
   createVolunteerParticipant,
@@ -306,4 +333,5 @@ export default {
   getParticipantById,
   getStats,
   updateParticipant,
+  deleteParticipant,
 };

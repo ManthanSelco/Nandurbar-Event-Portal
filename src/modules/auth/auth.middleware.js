@@ -36,7 +36,7 @@ const protect = asyncHandler(async (req, res, next) => {
     "Staff account has been deleted."
   );
 }
-
+console.log("AUTH STAFF ROLE:", staff.role);
   req.staff = staff;
 
   next();

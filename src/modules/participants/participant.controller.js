@@ -45,6 +45,21 @@ const updateParticipant = asyncHandler(async (req, res) => {
   return ApiResponse.success(res, "Participant updated successfully.", data);
 });
 
+
+
+const deleteParticipant = asyncHandler(async (req, res) => {
+  const data = await participantService.deleteParticipant(
+    req.params.id,
+    req.staff._id
+  );
+
+  return ApiResponse.success(
+    res,
+    "Participant deleted successfully.",
+    data
+  );
+});
+
 const getParticipantById = asyncHandler(async (req, res) => {
   const data = await participantService.getParticipantById(
     req.params.id
@@ -72,6 +87,7 @@ export default {
   verifyOtp,
   createParticipant,
   createVolunteerParticipant,
+  deleteParticipant,
   getParticipants,
   getStats,
   getParticipantById,

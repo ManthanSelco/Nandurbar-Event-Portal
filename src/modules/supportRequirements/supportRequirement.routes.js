@@ -1,8 +1,11 @@
 import { Router } from "express";
+
 import protect from "../auth/auth.middleware.js";
 import authorize from "../../middleware/authorize.middleware.js";
 import validate from "../../middleware/validate.middleware.js";
+
 import controller from "./supportRequirement.controller.js";
+
 import {
   createSupportRequirementSchema,
   updateSupportRequirementSchema,
@@ -10,16 +13,54 @@ import {
 
 const router = Router();
 
-router.use(protect, authorize("SUPER_ADMIN"));
+/*
+ * Requirements
+ *
+ * STAFF:
+ * - Can view requirements
+ *
+ * SUPER_ADMIN:
+ * - Can view
+ * - Can create
+ * - Can update
+ * - Can delete
+ */
 
-router.post("/", validate(createSupportRequirementSchema), controller.create);
-router.get("/", controller.list);
-router.get("/:id", controller.getById);
+router.get(
+  "/",
+  protect,
+  authorize("SUPER_ADMIN", "STAFF"),
+  controller.list
+);
+
+router.get(
+  "/:id",
+  protect,
+  authorize("SUPER_ADMIN", "STAFF"),
+  controller.getById
+);
+
+router.post(
+  "/",
+  protect,
+  authorize("SUPER_ADMIN"),
+  validate(createSupportRequirementSchema),
+  controller.create
+);
+
 router.patch(
   "/:id",
+  protect,
+  authorize("SUPER_ADMIN"),
   validate(updateSupportRequirementSchema),
   controller.update
 );
-router.delete("/:id", controller.remove);
+
+router.delete(
+  "/:id",
+  protect,
+  authorize("SUPER_ADMIN"),
+  controller.remove
+);
 
 export default router;
