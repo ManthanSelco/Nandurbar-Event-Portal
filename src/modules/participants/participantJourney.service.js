@@ -1,3 +1,4 @@
+
 import mongoose from "mongoose";
 import Participant from "./participant.model.js";
 import ApiError from "../../shared/errors/ApiError.js";
@@ -48,7 +49,7 @@ const getAssessment = async (id) => {
       "sitePhotos",
       "machineryPhotos",
       "productPhotos",
-        "otherDocuments",
+      "otherDocuments",
     ];
 
     for (const docType of documentTypes) {
@@ -69,10 +70,10 @@ const getAssessment = async (id) => {
     }
 
     /*
-     |--------------------------------------------------------------------------
-     | Electricity Bill
-     |--------------------------------------------------------------------------
-     */
+    |--------------------------------------------------------------------------
+    | Electricity Bill
+    |--------------------------------------------------------------------------
+    */
 
     if (
       assessment.documents.electricityBill &&
@@ -94,7 +95,6 @@ const getAssessment = async (id) => {
   };
 };
 
-
 const updateAssessment = async (id, payload) => {
   const participant = await getParticipant(id);
 
@@ -102,9 +102,13 @@ const updateAssessment = async (id, payload) => {
     ? participant.detailedAssessment.toObject()
     : participant.detailedAssessment || {};
 
+  // Status belongs to participant.assessmentStatus,
+  // not inside detailedAssessment.
+  const { status, ...assessmentPayload } = payload;
+
   const next = {
     ...current,
-    ...payload,
+    ...assessmentPayload,
     lastUpdatedAt: new Date(),
   };
 
@@ -115,8 +119,9 @@ const updateAssessment = async (id, payload) => {
   | Assessment status
   |--------------------------------------------------------------------------
   */
-  if (payload.status) {
-    participant.assessmentStatus = payload.status;
+
+  if (status) {
+    participant.assessmentStatus = status;
   } else if (participant.assessmentStatus === "NOT_STARTED") {
     participant.assessmentStatus = "IN_PROGRESS";
   }
@@ -129,7 +134,6 @@ const updateAssessment = async (id, payload) => {
     assessment: participant.detailedAssessment,
   };
 };
-
 
 const uploadAssessmentDocuments = async (
   id,
@@ -146,7 +150,6 @@ const uploadAssessmentDocuments = async (
 
   const allowedDocTypes = [
     "sitePhotos",
-    "allowedDocTypes" ,
     "machineryPhotos",
     "productPhotos",
     "electricityBill",
@@ -154,10 +157,7 @@ const uploadAssessmentDocuments = async (
   ];
 
   if (!allowedDocTypes.includes(docType)) {
-    throw new ApiError(
-      400,
-      "Invalid document type."
-    );
+    throw new ApiError(400, "Invalid document type.");
   }
 
   /*
@@ -167,10 +167,7 @@ const uploadAssessmentDocuments = async (
   */
 
   if (!files || files.length === 0) {
-    throw new ApiError(
-      400,
-      "At least one file is required."
-    );
+    throw new ApiError(400, "At least one file is required.");
   }
 
   /*
@@ -206,7 +203,7 @@ const uploadAssessmentDocuments = async (
       sitePhotos: [],
       machineryPhotos: [],
       productPhotos: [],
-       otherDocuments: [],
+      otherDocuments: [],
       electricityBill: null,
     };
   }
@@ -308,10 +305,7 @@ const deleteAssessmentDocument = async (
   ];
 
   if (!allowedDocTypes.includes(docType)) {
-    throw new ApiError(
-      400,
-      "Invalid document type."
-    );
+    throw new ApiError(400, "Invalid document type.");
   }
 
   let documentFound = false;
@@ -326,10 +320,7 @@ const deleteAssessmentDocument = async (
       !document ||
       document.fileKey !== fileKey
     ) {
-      throw new ApiError(
-        404,
-        "Document not found."
-      );
+      throw new ApiError(404, "Document not found.");
     }
 
     await deleteFromS3(document.fileKey);
@@ -350,14 +341,10 @@ const deleteAssessmentDocument = async (
     );
 
     if (documentIndex === -1) {
-      throw new ApiError(
-        404,
-        "Document not found."
-      );
+      throw new ApiError(404, "Document not found.");
     }
 
-    const document =
-      documentList[documentIndex];
+    const document = documentList[documentIndex];
 
     await deleteFromS3(document.fileKey);
 
@@ -369,10 +356,7 @@ const deleteAssessmentDocument = async (
   }
 
   if (!documentFound) {
-    throw new ApiError(
-      404,
-      "Document not found."
-    );
+    throw new ApiError(404, "Document not found.");
   }
 
   participant.detailedAssessment.lastUpdatedAt =
@@ -460,19 +444,29 @@ const addIntervention = async (id, payload) => {
 |--------------------------------------------------------------------------
 */
 
-const updateIntervention = async (id, interventionId, payload) => {
+const updateIntervention = async (
+  id,
+  interventionId,
+  payload
+) => {
   const participant = await getParticipant(id);
 
   const intervention =
-    participant.solutionDesign?.interventions?.id(interventionId);
+    participant.solutionDesign?.interventions?.id(
+      interventionId
+    );
 
   if (!intervention) {
-    throw new ApiError(404, "Solution intervention not found.");
+    throw new ApiError(
+      404,
+      "Solution intervention not found."
+    );
   }
 
   Object.assign(intervention, payload);
 
-  participant.solutionDesign.lastUpdatedAt = new Date();
+  participant.solutionDesign.lastUpdatedAt =
+    new Date();
 
   await participant.save();
 
@@ -496,7 +490,10 @@ const getImplementation = async (id) => {
   };
 };
 
-const createImplementation = async (id, plannedInterventionId) => {
+const createImplementation = async (
+  id,
+  plannedInterventionId
+) => {
   const participant = await getParticipant(id);
 
   if (
@@ -509,12 +506,16 @@ const createImplementation = async (id, plannedInterventionId) => {
     );
   }
 
-  const planned = participant.solutionDesign.interventions.id(
-    plannedInterventionId
-  );
+  const planned =
+    participant.solutionDesign.interventions.id(
+      plannedInterventionId
+    );
 
   if (!planned) {
-    throw new ApiError(404, "Planned intervention not found.");
+    throw new ApiError(
+      404,
+      "Planned intervention not found."
+    );
   }
 
   if (!participant.implementation) {
@@ -523,10 +524,12 @@ const createImplementation = async (id, plannedInterventionId) => {
     };
   }
 
-  const existing = participant.implementation.interventions.find(
-    (item) =>
-      String(item.plannedInterventionId) === String(plannedInterventionId)
-  );
+  const existing =
+    participant.implementation.interventions.find(
+      (item) =>
+        String(item.plannedInterventionId) ===
+        String(plannedInterventionId)
+    );
 
   if (existing) {
     return existing;
@@ -538,11 +541,17 @@ const createImplementation = async (id, plannedInterventionId) => {
     lastUpdatedAt: new Date(),
   });
 
-  participant.implementation.lastUpdatedAt = new Date();
+  participant.implementation.lastUpdatedAt =
+    new Date();
 
-  if (participant.implementationStatus === "NOT_STARTED") {
-    participant.implementationStatus = "PLANNED";
-  }
+  /*
+  |--------------------------------------------------------------------------
+  | Important
+  |--------------------------------------------------------------------------
+  | Individual implementation currentStatus does not
+  | automatically change participant-level implementationStatus.
+  |--------------------------------------------------------------------------
+  */
 
   await participant.save();
 
@@ -559,51 +568,40 @@ const updateImplementation = async (
   const participant = await getParticipant(id);
 
   const implementation =
-    participant.implementation?.interventions?.id(implementationId);
+    participant.implementation?.interventions?.id(
+      implementationId
+    );
 
   if (!implementation) {
-    throw new ApiError(404, "Implementation record not found.");
+    throw new ApiError(
+      404,
+      "Implementation record not found."
+    );
   }
 
   Object.assign(implementation, payload);
 
   implementation.lastUpdatedAt = new Date();
 
-  participant.implementation.lastUpdatedAt = new Date();
+  participant.implementation.lastUpdatedAt =
+    new Date();
 
   /*
   |--------------------------------------------------------------------------
-  | Keep participant-level implementation status compatible
+  | Important
+  |--------------------------------------------------------------------------
+  | Do NOT map implementation.currentStatus to
+  | participant.implementationStatus.
+  |
+  | currentStatus = individual intervention status
+  | implementationStatus = participant-level journey status
   |--------------------------------------------------------------------------
   */
-
-  const statusMap = {
-    Proposed: "PLANNED",
-    Approved: "APPROVED",
-    Procurement: "IN_PROGRESS",
-    Installation: "IN_PROGRESS",
-    Operational: "IMPLEMENTED",
-    Delayed: "IN_PROGRESS",
-    Cancelled: "REJECTED",
-    Modified: "IN_PROGRESS",
-    Closed: "IMPLEMENTED",
-  };
-
-  const mappedStatus = statusMap[implementation.currentStatus];
-
-  if (mappedStatus) {
-    participant.implementationStatus = mappedStatus;
-  }
 
   await participant.save();
 
   return implementation;
 };
-
-
-
-
-
 
 export default {
   getAssessment,
@@ -620,3 +618,4 @@ export default {
   createImplementation,
   updateImplementation,
 };
+

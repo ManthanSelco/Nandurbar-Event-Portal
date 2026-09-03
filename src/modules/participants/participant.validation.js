@@ -173,7 +173,21 @@ const trackingFields = {
   ])).optional(),
   whatCouldBeBetter: z.string().trim().max(2000).optional(),
   assessmentStatus: z.enum(["NOT_STARTED", "IN_PROGRESS", "COMPLETED"]).optional(),
-  implementationStatus: z.enum(["NOT_STARTED", "PLANNED", "APPROVED", "IN_PROGRESS", "IMPLEMENTED", "DEFERRED", "REJECTED"]).optional(),
+ implementationStatus: z
+  .enum([
+    // OLD STATUSES — temporary for existing participants
+   "NOT_STARTED",
+    "ASSESSMENT_PENDING",
+    "ASSESSMENT_COMPLETED",
+    "RE_ASSESSMENT_REQUIRED",
+    "SOLUTION_PROPOSED",
+    "SOLUTION_APPROVED",
+    "PROCUREMENT",
+    "VENDOR_UPDATE",
+    "IMPLEMENTATION_COMPLETED",
+    "REJECTED",
+  ])
+  .optional(),
   recommendedSolutions: z.array(z.string().trim().min(1).max(150)).optional(),
   implementationNotes: z.string().trim().max(3000).optional(),
   matchedVendorIds: z.array(z.string().min(1)).optional(),

@@ -534,24 +534,347 @@ identifiedSolution: {
       },
     },
 
-    /*
+
+// -----------------------------------------------------------------
+// SOLUION AND DESING
+// ---------------------------------------------------------------
+
+
+/*
+|--------------------------------------------------------------------------
+| Solution & Design
+|--------------------------------------------------------------------------
+| Stores the solution/design work created after the detailed assessment.
+|
+| Contains:
+| - Identified gaps
+| - Recommended interventions
+| - Intervention-plan decisions
+| - Outcome indicators
+|--------------------------------------------------------------------------
+*/
+
+solutionDesign: {
+  gaps: {
+    type: [
+      {
+        name: {
+          type: String,
+          required: true,
+          trim: true,
+          maxlength: 300,
+        },
+
+        description: {
+          type: String,
+          trim: true,
+          maxlength: 2000,
+          default: "",
+        },
+      },
+    ],
+    default: [],
+  },
+
+  interventions: {
+    type: [
+      {
+        interventionType: {
+          type: String,
+          enum: ["hard", "soft"],
+          default: "hard",
+        },
+
+        title: {
+          type: String,
+          required: true,
+          trim: true,
+          maxlength: 300,
+        },
+
+        specification: {
+          type: String,
+          trim: true,
+          maxlength: 2000,
+          default: "",
+        },
+
+        why: {
+          type: String,
+          trim: true,
+          maxlength: 2000,
+          default: "",
+        },
+
+        source: {
+          type: String,
+          trim: true,
+          maxlength: 500,
+          default: "",
+        },
+
+        priority: {
+          type: String,
+          enum: ["High", "Medium", "Low"],
+          default: "Medium",
+        },
+
+        estimatedCost: {
+          type: Number,
+          min: 0,
+          default: null,
+        },
+
+        leverageEndUserPercent: {
+          type: Number,
+          min: 0,
+          max: 100,
+          default: 30,
+        },
+
+        leverageSelcoPercent: {
+          type: Number,
+          min: 0,
+          max: 100,
+          default: 70,
+        },
+
+        teamDecision: {
+          type: String,
+          enum: [
+            "DECIDE",
+            "ACCEPT",
+            "MODIFY",
+            "REJECT",
+            "DEFER",
+          ],
+          default: "DECIDE",
+        },
+
+        decisionRationale: {
+          type: String,
+          trim: true,
+          maxlength: 3000,
+          default: "",
+        },
+
+        addToInterventionPlan: {
+          type: Boolean,
+          default: false,
+        },
+
+        status: {
+          type: String,
+          enum: [
+            "Proposed",
+            "Approved",
+            "Procurement",
+            "Installation",
+            "Operational",
+            "Delayed",
+            "Cancelled",
+            "Modified",
+            "Closed",
+          ],
+          default: "Proposed",
+        },
+      },
+    ],
+    default: [],
+  },
+
+  indicators: {
+    type: [
+      {
+        name: {
+          type: String,
+          required: true,
+          trim: true,
+          maxlength: 200,
+        },
+
+        baseline: {
+          type: String,
+          trim: true,
+          maxlength: 200,
+          default: "",
+        },
+
+        target: {
+          type: String,
+          trim: true,
+          maxlength: 200,
+          default: "",
+        },
+
+        current: {
+          type: String,
+          trim: true,
+          maxlength: 200,
+          default: "",
+        },
+
+        dateMeasured: {
+          type: Date,
+          default: null,
+        },
+      },
+    ],
+    default: [],
+  },
+
+  lastUpdatedAt: {
+    type: Date,
+    default: null,
+  },
+},
+
+
+
+
+
+  /*
     |--------------------------------------------------------------------------
     | Existing Implementation Status
     |--------------------------------------------------------------------------
     | KEEPING EXISTING FIELD UNCHANGED FOR NOW.
     |--------------------------------------------------------------------------
     */
+
+/*
+|--------------------------------------------------------------------------
+| Implementation
+|--------------------------------------------------------------------------
+| Stores the actual implementation record separately from
+| Solution & Design planned interventions.
+|--------------------------------------------------------------------------
+*/
+
+implementation: {
+  interventions: {
+    type: [
+      {
+        plannedInterventionId: {
+          type: mongoose.Schema.Types.ObjectId,
+          required: true,
+        },
+
+        actualCost: {
+          type: Number,
+          min: 0,
+          default: null,
+        },
+
+        endUserContribution: {
+          type: Number,
+          min: 0,
+          default: null,
+        },
+
+        selcoContribution: {
+          type: Number,
+          min: 0,
+          default: null,
+        },
+
+        vendorName: {
+          type: String,
+          trim: true,
+          default: "",
+        },
+
+        procurementDate: {
+          type: Date,
+          default: null,
+        },
+
+        installationDate: {
+          type: Date,
+          default: null,
+        },
+
+        operationalDate: {
+          type: Date,
+          default: null,
+        },
+
+        currentStatus: {
+          type: String,
+          enum: [
+            "Proposed",
+            "Approved",
+            "Procurement",
+            "Installation",
+            "Operational",
+            "Delayed",
+            "Cancelled",
+            "Modified",
+            "Closed",
+          ],
+          default: "Proposed",
+        },
+
+        gpsSiteConfirmed: {
+          type: Boolean,
+          default: false,
+        },
+
+        latitude: {
+          type: Number,
+          min: -90,
+          max: 90,
+          default: null,
+        },
+
+        longitude: {
+          type: Number,
+          min: -180,
+          max: 180,
+          default: null,
+        },
+
+        reasonForChange: {
+          type: String,
+          trim: true,
+          maxlength: 3000,
+          default: "",
+        },
+
+        lastUpdatedAt: {
+          type: Date,
+          default: Date.now,
+        },
+      },
+    ],
+    default: [],
+  },
+
+  lastUpdatedAt: {
+    type: Date,
+    default: null,
+  },
+},
+
+
+
     implementationStatus: {
       type: String,
       enum: [
-        "NOT_STARTED",
-        "PLANNED",
-        "APPROVED",
-        "IN_PROGRESS",
-        "IMPLEMENTED",
-        "DEFERRED",
-        "REJECTED",
-      ],
+        
+     "NOT_STARTED",
+    "ASSESSMENT_PENDING",
+    "ASSESSMENT_COMPLETED",
+    "RE_ASSESSMENT_REQUIRED",
+    "SOLUTION_PROPOSED",
+    "SOLUTION_APPROVED",
+    "PROCUREMENT",
+    "VENDOR_UPDATE",
+    "IMPLEMENTATION_COMPLETED",
+    "REJECTED",
+
+
+
+ ],
       default: "NOT_STARTED",
       index: true,
     },
