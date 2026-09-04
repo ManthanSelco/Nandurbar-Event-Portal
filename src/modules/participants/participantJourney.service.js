@@ -38,53 +38,43 @@ const getAssessment = async (id) => {
     ? participant.detailedAssessment.toObject()
     : participant.detailedAssessment || {};
 
-  /*
-  |--------------------------------------------------------------------------
-  | Generate fresh S3 URLs
-  |--------------------------------------------------------------------------
-  */
-
   if (assessment.documents) {
     const documentTypes = [
       "sitePhotos",
       "machineryPhotos",
       "productPhotos",
       "otherDocuments",
+      "electricityBill",
     ];
 
     for (const docType of documentTypes) {
-      if (Array.isArray(assessment.documents[docType])) {
-        assessment.documents[docType] = await Promise.all(
-          assessment.documents[docType].map(async (document) => {
-            if (!document.fileKey) {
-              return document;
-            }
+      let documents = assessment.documents[docType];
 
-            return {
-              ...document,
-              fileUrl: await getS3SignedUrl(document.fileKey),
-            };
-          })
-        );
+      // Backward compatibility:
+      // Old electricity bill was stored as a single object.
+      if (docType === "electricityBill" && documents) {
+        if (!Array.isArray(documents)) {
+          documents = [documents];
+        }
       }
-    }
 
-    /*
-    |--------------------------------------------------------------------------
-    | Electricity Bill
-    |--------------------------------------------------------------------------
-    */
+      if (!Array.isArray(documents)) {
+        assessment.documents[docType] = [];
+        continue;
+      }
 
-    if (
-      assessment.documents.electricityBill &&
-      assessment.documents.electricityBill.fileKey
-    ) {
-      assessment.documents.electricityBill = {
-        ...assessment.documents.electricityBill,
-        fileUrl: await getS3SignedUrl(
-          assessment.documents.electricityBill.fileKey
-        ),
-      };
+      assessment.documents[docType] = await Promise.all(
+        documents.map(async (document) => {
+          if (!document?.fileKey) {
+            return document;
+          }
+
+          return {
+            ...document,
+            fileUrl: await getS3SignedUrl(document.fileKey),
+          };
+        })
+      );
     }
   }
 
@@ -135,18 +125,8 @@ const updateAssessment = async (id, payload) => {
   };
 };
 
-const uploadAssessmentDocuments = async (
-  id,
-  docType,
-  files
-) => {
+const uploadAssessmentDocuments = async (id, docType, files) => {
   const participant = await getParticipant(id);
-
-  /*
-  |--------------------------------------------------------------------------
-  | Validate document type
-  |--------------------------------------------------------------------------
-  */
 
   const allowedDocTypes = [
     "sitePhotos",
@@ -160,39 +140,9 @@ const uploadAssessmentDocuments = async (
     throw new ApiError(400, "Invalid document type.");
   }
 
-  /*
-  |--------------------------------------------------------------------------
-  | Validate files
-  |--------------------------------------------------------------------------
-  */
-
   if (!files || files.length === 0) {
     throw new ApiError(400, "At least one file is required.");
   }
-
-  /*
-  |--------------------------------------------------------------------------
-  | Electricity bill
-  |--------------------------------------------------------------------------
-  | Only one electricity bill is allowed.
-  |--------------------------------------------------------------------------
-  */
-
-  if (
-    docType === "electricityBill" &&
-    files.length > 1
-  ) {
-    throw new ApiError(
-      400,
-      "Only one electricity bill can be uploaded."
-    );
-  }
-
-  /*
-  |--------------------------------------------------------------------------
-  | Make sure detailedAssessment exists
-  |--------------------------------------------------------------------------
-  */
 
   if (!participant.detailedAssessment) {
     participant.detailedAssessment = {};
@@ -203,16 +153,21 @@ const uploadAssessmentDocuments = async (
       sitePhotos: [],
       machineryPhotos: [],
       productPhotos: [],
+      electricityBill: [],
       otherDocuments: [],
-      electricityBill: null,
     };
   }
 
-  /*
-  |--------------------------------------------------------------------------
-  | Upload files to S3
-  |--------------------------------------------------------------------------
-  */
+  const currentDocuments =
+    participant.detailedAssessment.documents[docType];
+
+  // Backward compatibility:
+  // Old electricity bill may exist as a single object.
+  const existingDocuments = Array.isArray(currentDocuments)
+    ? currentDocuments
+    : currentDocuments
+      ? [currentDocuments]
+      : [];
 
   const uploadedDocuments = [];
 
@@ -237,26 +192,12 @@ const uploadAssessmentDocuments = async (
     uploadedDocuments.push(document);
   }
 
-  /*
-  |--------------------------------------------------------------------------
-  | Save documents to participant
-  |--------------------------------------------------------------------------
-  */
-
-  if (docType === "electricityBill") {
-    participant.detailedAssessment.documents.electricityBill =
-      uploadedDocuments[0];
-  } else {
-    participant.detailedAssessment.documents[docType].push(
-      ...uploadedDocuments
-    );
-  }
-
-  /*
-  |--------------------------------------------------------------------------
-  | Assessment update
-  |--------------------------------------------------------------------------
-  */
+  // IMPORTANT:
+  // Assign a completely new array instead of using push().
+  participant.detailedAssessment.documents[docType] = [
+    ...existingDocuments,
+    ...uploadedDocuments,
+  ];
 
   participant.detailedAssessment.lastUpdatedAt = new Date();
 
@@ -265,12 +206,6 @@ const uploadAssessmentDocuments = async (
   }
 
   await participant.save();
-
-  /*
-  |--------------------------------------------------------------------------
-  | Return uploaded documents
-  |--------------------------------------------------------------------------
-  */
 
   return {
     participantId: participant._id,
@@ -287,7 +222,8 @@ const deleteAssessmentDocument = async (
 ) => {
   const participant = await getParticipant(id);
 
-  const documents = participant.detailedAssessment?.documents;
+  const documents =
+    participant.detailedAssessment?.documents;
 
   if (!documents) {
     throw new ApiError(
@@ -305,59 +241,41 @@ const deleteAssessmentDocument = async (
   ];
 
   if (!allowedDocTypes.includes(docType)) {
-    throw new ApiError(400, "Invalid document type.");
-  }
-
-  let documentFound = false;
-
-  /*
-   * Electricity bill
-   */
-  if (docType === "electricityBill") {
-    const document = documents.electricityBill;
-
-    if (
-      !document ||
-      document.fileKey !== fileKey
-    ) {
-      throw new ApiError(404, "Document not found.");
-    }
-
-    await deleteFromS3(document.fileKey);
-
-    documents.electricityBill = null;
-    documentFound = true;
-  }
-
-  /*
-   * Multiple document types
-   */
-  else {
-    const documentList = documents[docType] || [];
-
-    const documentIndex = documentList.findIndex(
-      (document) =>
-        document.fileKey === fileKey
+    throw new ApiError(
+      400,
+      "Invalid document type."
     );
-
-    if (documentIndex === -1) {
-      throw new ApiError(404, "Document not found.");
-    }
-
-    const document = documentList[documentIndex];
-
-    await deleteFromS3(document.fileKey);
-
-    documentList.splice(documentIndex, 1);
-
-    documents[docType] = documentList;
-
-    documentFound = true;
   }
 
-  if (!documentFound) {
-    throw new ApiError(404, "Document not found.");
+  let documentList = documents[docType] || [];
+
+  // Backward compatibility for old electricity bill object
+  if (!Array.isArray(documentList)) {
+    documentList = documentList
+      ? [documentList]
+      : [];
   }
+
+  const documentIndex = documentList.findIndex(
+    (document) =>
+      document.fileKey === fileKey
+  );
+
+  if (documentIndex === -1) {
+    throw new ApiError(
+      404,
+      "Document not found."
+    );
+  }
+
+  const document =
+    documentList[documentIndex];
+
+  await deleteFromS3(document.fileKey);
+
+  documentList.splice(documentIndex, 1);
+
+  documents[docType] = documentList;
 
   participant.detailedAssessment.lastUpdatedAt =
     new Date();
@@ -370,7 +288,8 @@ const deleteAssessmentDocument = async (
     fileKey,
     assessmentStatus:
       participant.assessmentStatus,
-    documents: participant.detailedAssessment.documents,
+    documents:
+      participant.detailedAssessment.documents,
   };
 };
 

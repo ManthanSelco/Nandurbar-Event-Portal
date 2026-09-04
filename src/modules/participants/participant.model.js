@@ -507,10 +507,10 @@ identifiedSolution: {
     default: [],
   },
 
-        electricityBill: {
-          type: assessmentDocumentSchema,
-          default: null,
-        },
+       electricityBill: {
+  type: [assessmentDocumentSchema],
+  default: [],
+},
       },
 
       /*
