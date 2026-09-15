@@ -203,10 +203,94 @@ const trackingFields = {
   })).optional(),
 };
 
-export const updateParticipantSchema = z.object(trackingFields).refine(
-  (data) => Object.keys(data).length > 0,
-  { message: "At least one participant field is required." }
-);
+// export const updateParticipantSchema = z.object(trackingFields).refine(
+//   (data) => Object.keys(data).length > 0,
+//   { message: "At least one participant field is required." }
+// );
+
+
+export const updateParticipantSchema = z
+  .object({
+    // Basic Profile
+    name: z.string().trim().min(2).max(100).optional(),
+
+    mobile: z
+      .string()
+      .trim()
+      .regex(
+        mobileRegex,
+        "Mobile number must contain exactly 10 digits"
+      )
+      .optional(),
+
+    gender: z
+      .enum([
+        "MALE",
+        "FEMALE",
+        "OTHER",
+        "PREFER_NOT_TO_SAY",
+      ])
+      .optional(),
+
+    location: z.string().trim().min(2).max(200).optional(),
+
+    organizationType: z
+      .enum([
+        "INDIVIDUAL_ENTREPRENEUR",
+        "SHG",
+        "FPO_FPC",
+        "COOPERATIVE",
+        "NGO",
+        "GOVERNMENT",
+        "PRIVATE_COMPANY",
+        "OTHER",
+      ])
+      .optional(),
+
+    organizationName: z
+      .string()
+      .trim()
+      .min(1)
+      .max(200)
+      .optional(),
+
+    sector: z
+      .enum([
+        "FOOD_PROCESSING",
+        "AGRICULTURE",
+        "LIVESTOCK",
+        "RETAIL_SERVICES",
+        "MANUFACTURING",
+        "Papad",
+        "Mushroom",
+        "Millets",
+        "Chilli",
+        "Oil Mill",
+        "Rice Mill",
+        "Dairy",
+        "Honey",
+        "Dal",
+        "Vegitable",
+        "OTHER",
+      ])
+      .optional(),
+
+    // Existing tracking fields
+    ...trackingFields,
+  })
+  .refine(
+    (data) => Object.keys(data).length > 0,
+    {
+      message: "At least one participant field is required.",
+    }
+  );
+
+
+
+
+
+
+
 
 export const createVolunteerLinkSchema = z.object({
   volunteerName: z.string().trim().min(2).max(100),
